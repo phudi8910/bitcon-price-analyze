@@ -1,0 +1,62 @@
+select * from CRON_JOB
+select * from BITCOIN_EXCHANGE where CRON_JOB_ID is not null
+select * from BITCOIN_EXCHANGE order by id desc
+
+select * from BITCOIN_ANALYZE order by id desc
+
+select (-1*ord) id,a1.market_api_id,currency_code,symbol,:toDate created_date,current_timestamp created_time_stamp,
+            max(max_rate_float) max_rate_float,
+            max(min_rate_float) min_rate_float,
+            max(ratio_rate_float) ratio_rate_float,
+            max(open_rate_float) open_rate_float,
+            max(closed_rate_float)  closed_rate_float,
+            round((max(closed_rate_float) - max(open_rate_float)) *100/ max(open_rate_float)) ratio_open_closed_rate,
+            :timeType time_type,null description
+            from (
+            select 
+            market_api_id,currency_code,symbol,created_date,
+            max_rate_float,min_rate_float,max_rate_float-min_rate_float ratio_rate_float,
+            case when max_created_time_stamp=created_time_stamp then rate_float else 0 end closed_rate_float,
+            case when min_created_time_stamp=created_time_stamp then rate_float else 0 end open_rate_float
+            from (
+            select 
+            max(rate_float) over (partition by market_api_id,currency_code) max_rate_float ,
+            min(rate_float) over (partition by market_api_id,currency_code) min_rate_float ,
+            max(created_time_stamp) over (partition by market_api_id,currency_code) max_created_time_stamp ,
+            min(created_time_stamp) over (partition by market_api_id,currency_code) min_created_time_stamp
+            from bitcoin_exchange where created_date >= :fromDate and created_date<=:toDate and currency_code=case when :currencyCode is null then currency_code else :currencyCode end 
+            ) a
+            ) a1 inner join currency_list b1 on a1.currency_code=b1.id and a1.market_api_id=b1.market_api_id 
+            group by a1.market_api_id,currency_code,symbol,ord
+			
+select * from(
+select * from BITCOIN_ANALYZE where TIME_TYPE ='DAILY' order by created_date desc limit 3 
+)
+union all
+select * from (
+select * from BITCOIN_ANALYZE where TIME_TYPE ='WEEKLY' order by created_date desc limit 3 
+)
+union all
+select * from (
+select * from BITCOIN_ANALYZE where TIME_TYPE ='MONTHLY' order by created_date desc limit 3 
+)
+
+select * from BITCOIN_EXCHANGE order by id desc
+
+select * from CRON_JOB order by id desc
+
+select * from CRON_SCHEDULE
+
+select * from MARKET_API
+
+select * from CURRENCY_LIST
+
+select * from BITCOIN_EXCHANGE order by id desc
+
+select * from(
+select * from BITCOIN_EXCHANGE where CRON_JOB_ID is not null order by created_date desc limit 5
+)
+union all
+select * from (
+select * from BITCOIN_EXCHANGE where CRON_JOB_ID is null order by created_date desc limit 5
+)
